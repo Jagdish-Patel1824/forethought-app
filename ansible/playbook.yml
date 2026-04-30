@@ -55,7 +55,7 @@
       shell: |
         helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
         -n monitoring \
-        --create-namespace 
+        --create-namespace \
         -f /home/ubuntu/node-app/monitoring/values.yml
 
     # ✅ Clean broken pods (IMPORTANT)
