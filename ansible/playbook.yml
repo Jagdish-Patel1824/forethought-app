@@ -1,0 +1,75 @@
+---
+- name: NodeJS_project Full Pipeline
+  hosts: all
+  become: yes
+
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+  tasks:
+    - name: Remove old repo
+      file:
+        path: /home/ubuntu/node-app
+        state: absent
+
+    - name: Clone Node app repo
+      git:
+        repo: https://github.com/Jagdish-Patel1824/forethought-app.git
+        dest: /home/ubuntu/node-app
+        version: main  
+        force: yes
+    
+    - name: Install K3s
+      shell: curl -sfL https://get.k3s.io | sh -
+      args:
+        creates: /usr/local/bin/k3s
+
+    - name: Wait for node to be ready
+      shell: kubectl get nodes
+      register: result
+      retries: 10
+      delay: 10
+      until: result.rc == 0
+
+
+    - name: Install Helm
+      shell: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+      args:
+        creates: /usr/local/bin/helm
+
+
+    - name: Add Prometheus Helm repo
+      shell: |
+        helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+        helm repo update
+
+    - name: Install Prometheus Stack
+      shell: |
+        helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
+        -n monitoring \
+        --create-namespace \
+        -f /home/ubuntu/node-app/monitoring/values.yml
+
+    - name: Apply Deployment
+      command: kubectl apply -f /home/ubuntu/node-app/kubernetes/deployment.yml
+
+    - name: Apply Service
+      command: kubectl apply -f /home/ubuntu/node-app/kubernetes/service.yml
+
+    - name: Apply ServiceMonitor
+      command: kubectl apply -f /home/ubuntu/node-app/monitoring/serviceMonitor.yml
+
+    # - name: Inject dashboard to Grafana
+    #   shell: |
+    #     kubectl create configmap grafana-dashboard \
+    #     --from-file=dashboard.json=/home/ubuntu/monitoring/dashboard.json \
+    #     -n monitoring \
+    #     --dry-run=client -o yaml | kubectl apply -f -
+    
+    # - name: Label configmap
+    #   shell: |
+    #     kubectl label configmap grafana-dashboard \
+    #     grafana_dashboard=1 \
+    #     -n monitoring \
+    #     --overwrite
+       

@@ -1,0 +1,50 @@
+pipeline{
+    agent any
+    
+    tools{
+        maven 'MyMaven'
+        terraform 'Terraform'
+        ansible 'ansible'
+    }
+    
+    stages{
+        stage('Download Repo') {
+        steps {
+            git 'https://github.com/Jagdish-Patel1824/DevOpsClassCodes.git'
+        }
+        }
+
+        stage('Build') {
+            steps{
+                sh 'mvn clean package'
+            }
+        }
+
+        stage('TF Init') {
+            steps{
+                sh 'cd terraform && terraform init'
+            }
+        }
+
+        stage('TF Apply') {
+            steps{
+                sh 'cd terraform && terraform apply -auto-approve'
+            }
+        }
+    
+
+
+        stage('Ansible Deploy') {
+            steps {
+                withCredentials([file(credentialsId: 'ec2-key', variable: 'ANSIBLE_PRIVATE_KEY_FILE')]) 
+                {
+                sh '''
+                    export ANSIBLE_HOST_KEY_CHECKING=False
+                    ansible-playbook -i ansible/inventory.aws_ec2.yml ansible/playbook.yml
+                    '''
+                }
+            }
+        }
+    
+    }
+}
