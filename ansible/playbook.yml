@@ -50,15 +50,13 @@
     - name: Update Helm repo
       shell: helm repo update
 
-    # ✅ Install/Upgrade Prometheus (LIGHT version)
-    - name: Install Prometheus Stack (light)
+    # ✅ Install/Upgrade Prometheus 
+    - name: Install Prometheus Stack 
       shell: |
         helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
         -n monitoring \
-        --create-namespace \
-        --set grafana.enabled=false \
-        --set alertmanager.enabled=false \
-        --set prometheus.prometheusSpec.resources.requests.memory=200Mi
+        --create-namespace 
+        -f /home/ubuntu/node-app/monitoring/values.yml
 
     # ✅ Clean broken pods (IMPORTANT)
     - name: Cleanup failed pods
