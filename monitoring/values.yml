@@ -4,7 +4,7 @@ grafana:
     nodePort: 30009
 
   adminUser: admin
-  adminPassword: "admin123"
+  adminPassword: "admin"
 
   sidecar:
     dashboards:

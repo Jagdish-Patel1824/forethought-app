@@ -7,6 +7,8 @@
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
 
   tasks:
+
+    # ✅ Clean repo
     - name: Remove old repo
       file:
         path: /home/ubuntu/node-app
@@ -16,14 +18,16 @@
       git:
         repo: https://github.com/Jagdish-Patel1824/forethought-app.git
         dest: /home/ubuntu/node-app
-        version: main  
+        version: main
         force: yes
-    
+
+    # ✅ Install K3s (only once)
     - name: Install K3s
       shell: curl -sfL https://get.k3s.io | sh -
       args:
         creates: /usr/local/bin/k3s
 
+    # ✅ Wait for node ready
     - name: Wait for node to be ready
       shell: kubectl get nodes
       register: result
@@ -31,34 +35,52 @@
       delay: 10
       until: result.rc == 0
 
-
+    # ✅ Install Helm (only once)
     - name: Install Helm
       shell: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
       args:
         creates: /usr/local/bin/helm
 
-
+    # ✅ Add repo only if not exists
     - name: Add Prometheus Helm repo
       shell: |
+        helm repo list | grep prometheus-community || \
         helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-        helm repo update
 
-    - name: Install Prometheus Stack
+    - name: Update Helm repo
+      shell: helm repo update
+
+    # ✅ Install/Upgrade Prometheus (LIGHT version)
+    - name: Install Prometheus Stack (light)
       shell: |
         helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
         -n monitoring \
         --create-namespace \
-        -f /home/ubuntu/node-app/monitoring/values.yml
+        --set grafana.enabled=false \
+        --set alertmanager.enabled=false \
+        --set prometheus.prometheusSpec.resources.requests.memory=200Mi
 
+    # ✅ Clean broken pods (IMPORTANT)
+    - name: Cleanup failed pods
+      shell: kubectl delete pods --all -n monitoring
+      ignore_errors: yes
+
+    # ✅ Deploy app
     - name: Apply Deployment
-      command: kubectl apply -f /home/ubuntu/node-app/kubernetes/deployment.yml
+      shell: kubectl apply -f /home/ubuntu/node-app/kubernetes/deployment.yml
+
+    # ✅ Service clean replace
+    - name: Delete node-app-service
+      shell: kubectl delete service node-app-service
+      ignore_errors: yes
 
     - name: Apply Service
-      command: kubectl apply -f /home/ubuntu/node-app/kubernetes/service.yml
+      shell: kubectl apply -f /home/ubuntu/node-app/kubernetes/service.yml
 
+    # ✅ ServiceMonitor
     - name: Apply ServiceMonitor
-      command: kubectl apply -f /home/ubuntu/node-app/monitoring/serviceMonitor.yml
-
+      shell: kubectl apply -f /home/ubuntu/node-app/monitoring/serviceMonitor.yml
+      
     # - name: Inject dashboard to Grafana
     #   shell: |
     #     kubectl create configmap grafana-dashboard \
