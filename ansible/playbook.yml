@@ -20,7 +20,21 @@
         dest: /home/ubuntu/node-app
         version: main
         force: yes
+    - name: Install npm
+      apt:
+        name: npm
+        state: present
 
+    - name: Install project dependencies
+      command: npm install
+      args:
+        chdir: /home/ubuntu/node-app
+
+    - name: Install prom-client
+      command: npm install prom-client
+      args:
+        chdir: /home/ubuntu/node-app
+        
     # ✅ Install K3s (only once)
     - name: Install K3s
       shell: curl -sfL https://get.k3s.io | sh -
