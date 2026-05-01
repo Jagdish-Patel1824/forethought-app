@@ -9,6 +9,8 @@ grafana:
   sidecar:
     dashboards:
       enabled: true
+      label: grafana_dashboard
+      searchNamespace: monitoring
 
 prometheus:
   service:

@@ -78,7 +78,10 @@
     # ✅ ServiceMonitor
     - name: Apply ServiceMonitor
       shell: kubectl apply -f /home/ubuntu/node-app/monitoring/serviceMonitor.yml
-      
+
+    - name: Remove old configmap
+      command: kubectl delete configmap grafana-dashboard -n monitoring
+
     - name: Inject dashboard to Grafana
       shell: |
         kubectl create configmap grafana-dashboard \
